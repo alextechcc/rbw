@@ -19,6 +19,8 @@ use tokio::io::AsyncReadExt as _;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use urlencoding;
+#[cfg(feature = "webauthn")]
+use webauthn_rs_proto::PublicKeyCredentialRequestOptions;
 
 #[derive(
     serde_repr::Serialize_repr,
@@ -55,7 +57,7 @@ impl std::fmt::Display for UriMatchType {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum TwoFactorProviderType {
     Authenticator = 0,
     Email = 1,
@@ -173,6 +175,10 @@ impl std::str::FromStr for TwoFactorProviderType {
         }
     }
 }
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[cfg(not(feature = "webauthn"))]
+pub struct PublicKeyCredentialRequestOptions {}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum KdfType {
@@ -343,8 +349,13 @@ struct ConnectErrorRes {
     error_description: Option<String>,
     #[serde(rename = "ErrorModel", alias = "errorModel")]
     error_model: Option<ConnectErrorResErrorModel>,
-    #[serde(rename = "TwoFactorProviders", alias = "twoFactorProviders")]
-    two_factor_providers: Option<Vec<TwoFactorProviderType>>,
+    #[serde(rename = "TwoFactorProviders2", alias = "twoFactorProviders2")]
+    two_factor_providers: Option<
+        HashMap<
+            TwoFactorProviderType,
+            Option<PublicKeyCredentialRequestOptions>,
+        >,
+    >,
 }
 
 #[derive(serde::Deserialize, Debug)]
